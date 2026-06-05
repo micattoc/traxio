@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+
+# Virtual environments
+.venv/
+
+# Django
+db.sqlite3
+media/
+staticfiles/
+
+# Local environment
+.env
+
+# Test / coverage
+.pytest_cache/
