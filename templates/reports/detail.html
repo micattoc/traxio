@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="panel">
+    <h1 class="section-title">{{ report.product }}</h1>
+    <p class="muted">{{ report.company }} | {{ report.mode|title }} report | {{ report.confidence_level|title }} confidence</p>
+</section>
+
+<section class="panel">
+    <h2 class="section-title">Timeline</h2>
+    <ul>
+        {% for item in report_data.timeline %}
+            <li><strong>{{ item.date }}</strong>: {{ item.event }}</li>
+        {% endfor %}
+    </ul>
+</section>
+
+<section class="panel">
+    <h2 class="section-title">Themes</h2>
+    <ul>
+        {% for theme in report_data.themes %}
+            <li><strong>{{ theme.theme }}</strong>: {{ theme.summary }}</li>
+        {% endfor %}
+    </ul>
+</section>
+
+<section class="panel">
+    <h2 class="section-title">User perception</h2>
+    <p>{{ report_data.user_perception.summary }}</p>
+</section>
+
+<section class="panel">
+    <h2 class="section-title">Confidence</h2>
+    <p><strong>{{ report_data.confidence.level|title }}</strong>: {{ report_data.confidence.reason }}</p>
+</section>
+
+<section class="panel">
+    <h2 class="section-title">Citations</h2>
+    <ul>
+        {% for citation in report_data.citations %}
+            <li class="citation">
+                <a href="{{ citation.url }}">{{ citation.title }}</a>
+                — {{ citation.snippet }}
+            </li>
+        {% endfor %}
+    </ul>
+</section>
+
+<section class="panel">
+    <h2 class="section-title">Agent timeline</h2>
+    <ul>
+        {% for item in report_data.agent_timeline %}
+            <li><strong>{{ item.agent }}</strong>: {{ item.event }}</li>
+        {% endfor %}
+    </ul>
+</section>
+
+<section class="panel">
+    <h2 class="section-title">Rejected claims</h2>
+    <ul>
+        {% for item in report_data.rejected_claims %}
+            <li><strong>{{ item.claim }}</strong> — {{ item.reason }}</li>
+        {% endfor %}
+    </ul>
+</section>
+{% endblock %}

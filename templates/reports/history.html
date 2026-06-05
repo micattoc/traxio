@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="panel">
+    <h1 class="section-title">Saved reports</h1>
+
+    {% if reports %}
+        <ul>
+            {% for report in reports %}
+                <li>
+                    <a href="{% url 'reports:detail' report.pk %}">
+                        {{ report.product }} by {{ report.company }}
+                    </a>
+                    <span class="muted">
+                        {{ report.confidence_level|title }} confidence,
+                        saved 
+                        <time class="local-datetime" datetime="{{ report.saved_at|date:'c' }}">
+                            {{ report.saved_at }}
+                        </time>
+                    </span>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="muted">No saved reports yet.</p>
+    {% endif %}
+
+</section>
+{% endblock %}

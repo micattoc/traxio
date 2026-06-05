@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="panel">
+    <h1 class="section-title">Generate competitor report</h1>
+    <p class="muted">Create an unsaved preview from external launch info.</p>
+
+    <form method="post">
+        {% csrf_token %}
+
+        <label for="company">Company</label>
+        <input id="company" name="company" placeholder="Example: OpenAI" required>
+
+        <label for="product">Product</label>
+        <input id="product" name="product" placeholder="Example: ChatGPT" required>
+
+        <button type="submit">Generate preview</button>
+    </form>
+</section>
+
+{% if preview %}
+<section class="panel">
+    <h2 class="section-title">{{ preview.product }} preview</h2>
+    <p class="muted">This report is not saved yet.</p>
+
+    <h3>Timeline</h3>
+    <ul>
+        {% for item in preview.report_data.timeline %}
+            <li><strong>{{ item.date }}</strong>: {{ item.event }}</li>
+        {% endfor %}
+    </ul>
+
+    <h3>Themes</h3>
+    <ul>
+        {% for theme in preview.report_data.themes %}
+            <li><strong>{{ theme.theme }}</strong>: {{ theme.summary }}</li>
+        {% endfor %}
+    </ul>
+
+    <h3>User perception</h3>
+    <p>{{ preview.report_data.user_perception.summary }}</p>
+
+    <h3>Confidence</h3>
+    <p><strong>{{ preview.report_data.confidence.level|title }}</strong>: {{ preview.report_data.confidence.reason }}</p>
+
+    <form method="post" action="{% url 'reports:save' %}">
+        {% csrf_token %}
+        <button type="submit">Save these insights</button>
+    </form>
+</section>
+{% endif %}
+{% endblock %}
