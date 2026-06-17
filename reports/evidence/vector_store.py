@@ -14,7 +14,7 @@ class VectorStoreComponents:
 
 def get_azure_embedding_model(settings):
     return AzureOpenAIEmbedding(
-        model=settings.azure_openai_embedding_deployment,
+        model=settings.azure_openai_embedding_model,
         deployment_name=settings.azure_openai_embedding_deployment,
         api_key=settings.azure_openai_api_key,
         azure_endpoint=settings.azure_openai_endpoint,

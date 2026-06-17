@@ -8,6 +8,7 @@ def get_evidence_settings():
         azure_openai_api_key=os.getenv("AZURE_OPENAI_API_KEY", ""),
         azure_openai_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT", ""),
         azure_openai_api_version=os.getenv("AZURE_OPENAI_API_VERSION", ""),
+        azure_openai_embedding_model=os.getenv("AZURE_OPENAI_EMBEDDING_MODEL", ""),
         azure_openai_embedding_deployment=os.getenv("AZURE_OPENAI_EMBEDDING_DEPLOYMENT", ""),
         pinecone_api_key=os.getenv("PINECONE_API_KEY", ""),
         pinecone_index_name=os.getenv("PINECONE_INDEX_NAME", ""),
