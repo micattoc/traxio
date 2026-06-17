@@ -2,31 +2,46 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
 from .models import Report
-from .services import build_mock_report
+from .services import build_mock_report, validate_report_data
 
 
 def generate_report(request):
-    preview = None
+    """Generate preview of report (that can be later saved)."""
+    preview = request.session.get("unsaved_report_preview")
+    error = None
 
     if request.method == "POST":
         company = request.POST.get("company", "").strip()
         product = request.POST.get("product", "").strip()
 
         if company and product:
-            preview = {
-                "company": company,
-                "product": product,
-                "mode": Report.MODE_SINGLE,
-                "confidence_level": Report.CONFIDENCE_LOW,
-                "report_data": build_mock_report(company, product),
-            }
-            request.session["unsaved_report_preview"] = preview
+            report_data = build_mock_report(company, product)
+            is_valid, validation_error = validate_report_data(report_data)
+
+            if is_valid:
+                preview = {
+                    "company": company,
+                    "product": product,
+                    "mode": Report.MODE_SINGLE,
+                    "confidence_level": Report.CONFIDENCE_LOW,
+                    "report_data": report_data,
+                }
+                request.session["unsaved_report_preview"] = preview
+            else:
+                preview = None
+                error = validation_error
+                request.session.pop("unsaved_report_preview", None)
+        else:
+            preview = None
+            error = "Company and product are required."
+            request.session.pop("unsaved_report_preview", None)
 
     return render(
         request,
         "reports/generate.html",
         {
             "preview": preview,
+            "error": error,
         },
     )
 

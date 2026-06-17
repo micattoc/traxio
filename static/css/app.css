@@ -78,3 +78,8 @@ button,
     font-size: 0.92rem;
     color: #475467;
 }
+
+.error {
+    color: #b42318;
+    font-weight: bold;
+}

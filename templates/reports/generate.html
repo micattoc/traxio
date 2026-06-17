@@ -3,7 +3,11 @@
 {% block content %}
 <section class="panel">
     <h1 class="section-title">Generate competitor report</h1>
-    <p class="muted">Create an unsaved preview from external launch info.</p>
+    <p class="muted">Create an unsaved preview from launch info.</p>
+
+    {% if error %}
+        <p class="error">{{ error }}</p>
+    {% endif %}
 
     <form method="post">
         {% csrf_token %}
