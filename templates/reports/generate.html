@@ -47,6 +47,30 @@
     <h3>Confidence</h3>
     <p><strong>{{ preview.report_data.confidence.level|title }}</strong>: {{ preview.report_data.confidence.reason }}</p>
 
+    <h3>Runtime source candidates</h3>
+
+    {% if preview.source_candidates %}
+        <ul>
+            {% for source in preview.source_candidates %}
+                <li>
+                    <strong>{{ source.source_type }}</strong>:
+                    <a href="{{ source.url }}">{{ source.title }}</a>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="muted">No source candidates were collected.</p>
+    {% endif %}
+
+    {% if preview.source_warnings %}
+        <h3>Source collection warnings</h3>
+        <ul>
+            {% for warning in preview.source_warnings %}
+                <li class="muted">{{ warning }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
     <form method="post" action="{% url 'reports:save' %}">
         {% csrf_token %}
         <button type="submit">Save these insights</button>

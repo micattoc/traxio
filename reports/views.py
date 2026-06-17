@@ -3,6 +3,7 @@ from django.views.decorators.http import require_POST
 
 from .models import Report
 from .services import build_mock_report, validate_report_data
+from .sources.collector import collect_source_candidates
 
 
 def generate_report(request):
@@ -16,6 +17,7 @@ def generate_report(request):
 
         if company and product:
             report_data = build_mock_report(company, product)
+            source_result = collect_source_candidates(company, product)
             is_valid, validation_error = validate_report_data(report_data)
 
             if is_valid:
@@ -25,6 +27,16 @@ def generate_report(request):
                     "mode": Report.MODE_SINGLE,
                     "confidence_level": Report.CONFIDENCE_LOW,
                     "report_data": report_data,
+                    "source_candidates": [
+                        {
+                            "title": candidate.title,
+                            "url": candidate.url,
+                            "source_type": candidate.source_type,
+                            "metadata": candidate.metadata,
+                        }
+                        for candidate in source_result.candidates
+                    ],
+                    "source_warnings": source_result.warnings,
                 }
                 request.session["unsaved_report_preview"] = preview
             else:
@@ -53,6 +65,19 @@ def save_report(request):
 
     if not preview:
         return redirect("reports:generate")
+
+    is_valid, validation_error = validate_report_data(preview.get("report_data", {}))
+
+    if not is_valid:
+        request.session.pop("unsaved_report_preview", None)
+        return render(
+            request,
+            "reports/generate.html",
+            {
+                "preview": None,
+                "error": validation_error,
+            },
+        )
 
     report = Report.objects.create(
         user=request.user if request.user.is_authenticated else None,
