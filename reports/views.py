@@ -4,6 +4,7 @@ from django.views.decorators.http import require_POST
 from .models import Report
 from .services import build_mock_report, validate_report_data
 from .sources.collector import collect_source_candidates
+from .sources.screening import screen_source_candidates
 
 
 def generate_report(request):
@@ -18,6 +19,7 @@ def generate_report(request):
         if company and product:
             report_data = build_mock_report(company, product)
             source_result = collect_source_candidates(company, product)
+            screening_result = screen_source_candidates(source_result.candidates)
             is_valid, validation_error = validate_report_data(report_data)
 
             if is_valid:
@@ -37,6 +39,26 @@ def generate_report(request):
                         for candidate in source_result.candidates
                     ],
                     "source_warnings": source_result.warnings,
+                    "approved_sources": [
+                        {
+                            "title": approved_source.candidate.title,
+                            "url": approved_source.candidate.url,
+                            "source_type": approved_source.candidate.source_type,
+                            "metadata": approved_source.candidate.metadata,
+                            "guard_summary": approved_source.guard_summary,
+                        }
+                        for approved_source in screening_result.approved_sources
+                    ],
+                    "skipped_sources": [
+                        {
+                            "title": skipped_source.candidate.title,
+                            "url": skipped_source.candidate.url,
+                            "source_type": skipped_source.candidate.source_type,
+                            "reason": skipped_source.reason,
+                        }
+                        for skipped_source in screening_result.skipped_sources
+                    ],
+                    "guard_warnings": screening_result.warnings,
                 }
                 request.session["unsaved_report_preview"] = preview
             else:

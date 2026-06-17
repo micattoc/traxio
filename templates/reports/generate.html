@@ -71,6 +71,48 @@
         </ul>
     {% endif %}
 
+    <h3>Approved sources</h3>
+    <p class="muted">These candidates passed the input guard.</p>
+
+    {% if preview.approved_sources %}
+        <ul>
+            {% for source in preview.approved_sources %}
+                <li>
+                    <strong>{{ source.source_type }}</strong>:
+                    <a href="{{ source.url }}">{{ source.title }}</a>
+                    <span class="muted">{{ source.guard_summary }}</span>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="muted">No source candidates passed the input guard.</p>
+    {% endif %}
+
+    <h3>Skipped sources</h3>
+
+    {% if preview.skipped_sources %}
+        <ul>
+            {% for source in preview.skipped_sources %}
+                <li>
+                    <strong>{{ source.source_type }}</strong>:
+                    <a href="{{ source.url }}">{{ source.title }}</a>
+                    <span class="muted">{{ source.reason }}</span>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="muted">No source candidates were skipped by the input guard.</p>
+    {% endif %}
+
+    {% if preview.guard_warnings %}
+        <h3>Input guard warnings</h3>
+        <ul>
+            {% for warning in preview.guard_warnings %}
+                <li class="muted">{{ warning }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
     <form method="post" action="{% url 'reports:save' %}">
         {% csrf_token %}
         <button type="submit">Save these insights</button>
