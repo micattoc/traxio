@@ -1,9 +1,10 @@
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
+from .agents.workflow import WorkflowExecutionError, run_launch_intelligence_workflow
 from .evidence.indexing import index_approved_sources
 from .models import Report
-from .services import build_mock_report, validate_report_data
+from .services import validate_report_data
 from .sources.collector import collect_source_candidates
 from .sources.screening import screen_source_candidates
 
@@ -18,7 +19,6 @@ def generate_report(request):
         product = request.POST.get("product", "").strip()
 
         if company and product:
-            report_data = build_mock_report(company, product)
             source_result = collect_source_candidates(company, product)
             screening_result = screen_source_candidates(source_result.candidates)
             evidence_result = index_approved_sources(
@@ -26,6 +26,25 @@ def generate_report(request):
                 company=company,
                 product=product,
             )
+            try:
+                workflow_result = run_launch_intelligence_workflow(
+                    company=company,
+                    product=product,
+                    evidence_run_id=evidence_result.run_id,
+                )
+            except WorkflowExecutionError as workflow_error:
+                preview = None
+                error = f"Workflow failed: {workflow_error}"
+                request.session.pop("unsaved_report_preview", None)
+                return render(
+                    request,
+                    "reports/generate.html",
+                    {
+                        "preview": preview,
+                        "error": error,
+                    },
+                )
+            report_data = workflow_result.report_data
             is_valid, validation_error = validate_report_data(report_data)
 
             if is_valid:
