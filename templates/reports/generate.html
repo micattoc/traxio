@@ -113,6 +113,20 @@
         </ul>
     {% endif %}
 
+    <h3>Evidence indexing</h3>
+    <p>
+        Run ID: <code>{{ preview.evidence_run_id }}</code><br>
+        Indexed approved sources: {{ preview.indexed_source_count }}
+    </p>
+
+    {% if preview.evidence_warnings %}
+        <ul>
+            {% for warning in preview.evidence_warnings %}
+                <li class="muted">{{ warning }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
     <form method="post" action="{% url 'reports:save' %}">
         {% csrf_token %}
         <button type="submit">Save these insights</button>

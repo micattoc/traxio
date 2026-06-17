@@ -1,6 +1,7 @@
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
+from .evidence.indexing import index_approved_sources
 from .models import Report
 from .services import build_mock_report, validate_report_data
 from .sources.collector import collect_source_candidates
@@ -20,6 +21,11 @@ def generate_report(request):
             report_data = build_mock_report(company, product)
             source_result = collect_source_candidates(company, product)
             screening_result = screen_source_candidates(source_result.candidates)
+            evidence_result = index_approved_sources(
+                approved_sources=screening_result.approved_sources,
+                company=company,
+                product=product,
+            )
             is_valid, validation_error = validate_report_data(report_data)
 
             if is_valid:
@@ -59,6 +65,9 @@ def generate_report(request):
                         for skipped_source in screening_result.skipped_sources
                     ],
                     "guard_warnings": screening_result.warnings,
+                    "evidence_run_id": evidence_result.run_id,
+                    "indexed_source_count": evidence_result.indexed_source_count,
+                    "evidence_warnings": evidence_result.warnings,
                 }
                 request.session["unsaved_report_preview"] = preview
             else:
