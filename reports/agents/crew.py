@@ -11,13 +11,16 @@ def build_crewai_agents(settings):
     if not settings.is_configured:
         raise RuntimeError("CrewAI agent settings are incomplete.")
 
-    llm = LLM(
-        model=f"azure/{settings.azure_openai_chat_deployment}",
-        api_key=settings.azure_openai_api_key,
-        endpoint=settings.azure_openai_endpoint,
-        api_version=settings.azure_openai_api_version,
-        temperature=0.2,
-    )
+    llm_kwargs = {
+        "model": f"azure/{settings.azure_openai_chat_deployment}",
+        "api_key": settings.azure_openai_api_key,
+        "endpoint": settings.normalised_chat_endpoint,
+        "api_version": settings.azure_openai_chat_api_version,
+        "api": settings.chat_api_mode,
+        "temperature": 0.2,
+    }
+
+    llm = LLM(**llm_kwargs)
 
     return [
         Agent(
@@ -86,9 +89,11 @@ def run_crewai_report_generation(settings, company, product, workflow_evidence):
         description=(
             "Generate factual launch intelligence from the retrieved approved evidence. "
             "Do not provide strategic recommendations. Every accepted factual finding "
-            "must include a citation_id from the evidence. Return JSON with keys: "
-            "timeline, themes, user_perception, confidence, agent_timeline, "
-            "rejected_claims, citations."
+            "must include a citation_id from the evidence. Return JSON with this shape: "
+            "timeline as a list of objects with date and event; themes as a list of "
+            "objects with theme and summary; user_perception as an object with summary; "
+            "confidence as an object with level and reason; agent_timeline as a list; "
+            "rejected_claims as a list; citations as a list."
         ),
         expected_output="A structured JSON draft report with cited factual findings.",
         agent=analyst,
@@ -99,6 +104,7 @@ def run_crewai_report_generation(settings, company, product, workflow_evidence):
             "Audit the analyst draft. Reject unsupported, overstated, uncited, or strategic "
             "claims. Return only the final JSON object with keys: timeline, themes, "
             "user_perception, confidence, agent_timeline, rejected_claims, citations. "
+            "The user_perception value must be an object with a summary string. "
             "Rejected claim reasons must be one sentence."
         ),
         expected_output="A final audited JSON report object.",
@@ -115,6 +121,7 @@ def run_crewai_report_generation(settings, company, product, workflow_evidence):
     result = crew.kickoff()
     raw_output = getattr(result, "raw", str(result))
     report_data = parse_json_object(raw_output)
+    report_data = normalise_report_data(report_data)
     report_data["citations"] = build_citations_from_evidence(workflow_evidence)
 
     return report_data
@@ -130,3 +137,43 @@ def parse_json_object(raw_output):
             raise
 
         return json.loads(match.group(0))
+
+
+def normalise_report_data(report_data):
+    report_data = dict(report_data)
+
+    user_perception = report_data.get("user_perception")
+
+    if isinstance(user_perception, dict):
+        user_perception.setdefault("summary", "")
+    elif isinstance(user_perception, list):
+        report_data["user_perception"] = {
+            "summary": summarize_list_items(user_perception),
+        }
+    elif isinstance(user_perception, str):
+        report_data["user_perception"] = {
+            "summary": user_perception,
+        }
+    else:
+        report_data["user_perception"] = {
+            "summary": "No user perception evidence was available.",
+        }
+
+    return report_data
+
+
+def summarize_list_items(items):
+    summaries = []
+
+    for item in items:
+        if isinstance(item, dict):
+            summary = item.get("summary") or item.get("text") or item.get("finding")
+            if summary:
+                summaries.append(str(summary))
+        elif item:
+            summaries.append(str(item))
+
+    if not summaries:
+        return "No user perception evidence was available."
+
+    return " ".join(summaries)

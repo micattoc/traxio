@@ -18,7 +18,7 @@ def get_azure_embedding_model(settings):
         deployment_name=settings.azure_openai_embedding_deployment,
         api_key=settings.azure_openai_api_key,
         azure_endpoint=settings.azure_openai_endpoint,
-        api_version=settings.azure_openai_api_version,
+        api_version=settings.azure_openai_embedding_api_version,
     )
 
 

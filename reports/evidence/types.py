@@ -6,7 +6,7 @@ from typing import Any
 class EvidenceSettings:
     azure_openai_api_key: str
     azure_openai_endpoint: str
-    azure_openai_api_version: str
+    azure_openai_embedding_api_version: str
     azure_openai_embedding_model: str
     azure_openai_embedding_deployment: str
     pinecone_api_key: str
@@ -21,7 +21,7 @@ class EvidenceSettings:
         required_values = {
             "AZURE_OPENAI_API_KEY": self.azure_openai_api_key,
             "AZURE_OPENAI_ENDPOINT": self.azure_openai_endpoint,
-            "AZURE_OPENAI_API_VERSION": self.azure_openai_api_version,
+            "AZURE_OPENAI_EMBEDDING_API_VERSION": self.azure_openai_embedding_api_version,
             "AZURE_OPENAI_EMBEDDING_MODEL": self.azure_openai_embedding_model,
             "AZURE_OPENAI_EMBEDDING_DEPLOYMENT": self.azure_openai_embedding_deployment,
             "PINECONE_API_KEY": self.pinecone_api_key,
