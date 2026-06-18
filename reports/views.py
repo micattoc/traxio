@@ -3,8 +3,8 @@ from django.views.decorators.http import require_POST
 
 from .agents.workflow import WorkflowExecutionError, run_launch_intelligence_workflow
 from .evidence.indexing import index_approved_sources
+from .guards.output_guard import ReportOutputGuard
 from .models import Report
-from .services import validate_report_data
 from .sources.collector import collect_source_candidates
 from .sources.screening import screen_source_candidates
 
@@ -45,9 +45,13 @@ def generate_report(request):
                     },
                 )
             report_data = workflow_result.report_data
-            is_valid, validation_error = validate_report_data(report_data)
+            output_guard = ReportOutputGuard()
+            output_guard_result = output_guard.validate(
+                report_data,
+                skipped_sources=screening_result.skipped_sources,
+            )
 
-            if is_valid:
+            if output_guard_result.is_valid:
                 preview = {
                     "company": company,
                     "product": product,
@@ -91,7 +95,7 @@ def generate_report(request):
                 request.session["unsaved_report_preview"] = preview
             else:
                 preview = None
-                error = validation_error
+                error = f"Output guard failed: {output_guard_result.message}"
                 request.session.pop("unsaved_report_preview", None)
         else:
             preview = None
@@ -116,16 +120,20 @@ def save_report(request):
     if not preview:
         return redirect("reports:generate")
 
-    is_valid, validation_error = validate_report_data(preview.get("report_data", {}))
+    output_guard = ReportOutputGuard()
+    output_guard_result = output_guard.validate(
+        preview.get("report_data", {}),
+        skipped_sources=preview.get("skipped_sources", []),
+    )
 
-    if not is_valid:
+    if not output_guard_result.is_valid:
         request.session.pop("unsaved_report_preview", None)
         return render(
             request,
             "reports/generate.html",
             {
                 "preview": None,
-                "error": validation_error,
+                "error": f"Output guard failed: {output_guard_result.message}",
             },
         )
 

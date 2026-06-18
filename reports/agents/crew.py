@@ -1,9 +1,11 @@
-import json
-import re
-
 from crewai import Agent, Crew, LLM, Process, Task
 
 from .evidence import build_citations_from_evidence, evidence_to_prompt_context
+from .report_output import (
+    attach_user_perception_citations,
+    normalise_report_data,
+    parse_json_object,
+)
 
 
 def build_crewai_agents(settings):
@@ -58,6 +60,7 @@ def build_crewai_agents(settings):
 
 
 def run_crewai_report_generation(settings, company, product, workflow_evidence):
+    """Initiate CrewAI agent orchestration."""
     agents = build_crewai_agents(settings)
 
     if len(agents) < 4:
@@ -92,6 +95,8 @@ def run_crewai_report_generation(settings, company, product, workflow_evidence):
             "must include a citation_id from the evidence. Return JSON with this shape: "
             "timeline as a list of objects with date and event; themes as a list of "
             "objects with theme and summary; user_perception as an object with summary; "
+            "timeline, themes, and user_perception findings must include citation_id "
+            "or citation_ids; "
             "confidence as an object with level and reason; agent_timeline as a list; "
             "rejected_claims as a list; citations as a list."
         ),
@@ -119,61 +124,11 @@ def run_crewai_report_generation(settings, company, product, workflow_evidence):
     )
 
     result = crew.kickoff()
+
     raw_output = getattr(result, "raw", str(result))
     report_data = parse_json_object(raw_output)
     report_data = normalise_report_data(report_data)
     report_data["citations"] = build_citations_from_evidence(workflow_evidence)
+    attach_user_perception_citations(report_data, workflow_evidence)
 
     return report_data
-
-
-def parse_json_object(raw_output):
-    try:
-        return json.loads(raw_output)
-    except json.JSONDecodeError:
-        match = re.search(r"\{.*\}", raw_output, re.S)
-
-        if not match:
-            raise
-
-        return json.loads(match.group(0))
-
-
-def normalise_report_data(report_data):
-    report_data = dict(report_data)
-
-    user_perception = report_data.get("user_perception")
-
-    if isinstance(user_perception, dict):
-        user_perception.setdefault("summary", "")
-    elif isinstance(user_perception, list):
-        report_data["user_perception"] = {
-            "summary": summarize_list_items(user_perception),
-        }
-    elif isinstance(user_perception, str):
-        report_data["user_perception"] = {
-            "summary": user_perception,
-        }
-    else:
-        report_data["user_perception"] = {
-            "summary": "No user perception evidence was available.",
-        }
-
-    return report_data
-
-
-def summarize_list_items(items):
-    summaries = []
-
-    for item in items:
-        if isinstance(item, dict):
-            summary = item.get("summary") or item.get("text") or item.get("finding")
-            if summary:
-                summaries.append(str(summary))
-        elif item:
-            summaries.append(str(item))
-
-    if not summaries:
-        return "No user perception evidence was available."
-
-    return " ".join(summaries)
