@@ -1,7 +1,7 @@
 from urllib.parse import urlparse
 
 
-def normalize_company_slug(company):
+def normalise_company_slug(company):
     return "".join(character.lower() for character in company if character.isalnum())
 
 
@@ -11,7 +11,7 @@ def get_domain(url):
 
 def is_likely_company_owned_source(url, company):
     domain = get_domain(url)
-    company_slug = normalize_company_slug(company)
+    company_slug = normalise_company_slug(company)
 
     if not company_slug:
         return False

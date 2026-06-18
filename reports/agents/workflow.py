@@ -13,16 +13,18 @@ def run_launch_intelligence_workflow(company, product, evidence_run_id):
     settings = get_agent_settings()
 
     if not settings.is_configured:
-        missing_values = ", ".join(settings.missing_required_values)
         raise WorkflowExecutionError(
-            f"Agent LLM settings are incomplete: {missing_values}."
+            " ".join(settings.configuration_errors)
         )
 
-    workflow_evidence = collect_workflow_evidence(
-        company=company,
-        product=product,
-        run_id=evidence_run_id,
-    )
+    try:
+        workflow_evidence = collect_workflow_evidence(
+            company=company,
+            product=product,
+            run_id=evidence_run_id,
+        )
+    except Exception as error:
+        raise WorkflowExecutionError(f"Evidence retrieval failed: {error}") from error
 
     if not workflow_evidence.timeline and not workflow_evidence.themes:
         raise WorkflowExecutionError(

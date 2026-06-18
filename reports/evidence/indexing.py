@@ -35,7 +35,14 @@ def index_approved_sources(approved_sources, company, product, run_id=None):
     )
 
     # Embed new LlamaIndex documents into Pinecone vector store
-    build_vector_store_index(settings, documents)
+    try:
+        build_vector_store_index(settings, documents)
+    except Exception as error:
+        return EvidenceIndexResult(
+            run_id=run_id,
+            indexed_source_count=0,
+            warnings=[f"Evidence indexing failed: {error}"],
+        )
 
     return EvidenceIndexResult(
         run_id=run_id,
