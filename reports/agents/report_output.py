@@ -56,20 +56,81 @@ def summarise_list_items(items):
     return " ".join(summaries)
 
 
-def attach_user_perception_citations(report_data, workflow_evidence):
-    user_perception = report_data.get("user_perception", {})
+REPORT_CITATION_SECTIONS = {
+    "timeline": {
+        "evidence_attribute": "timeline",
+        "target_type": "list",
+        "citation_field": "citation_id",
+    },
+    "themes": {
+        "evidence_attribute": "themes",
+        "target_type": "list",
+        "citation_field": "citation_id",
+    },
+    "user_perception": {
+        "evidence_attribute": "user_perception",
+        "target_type": "object",
+        "citation_field": "citation_ids",
+    },
+}
 
-    if not isinstance(user_perception, dict):
-        return
 
-    if user_perception.get("citation_id") or user_perception.get("citation_ids"):
-        return
+def attach_missing_report_citations(report_data, workflow_evidence):
+    for section_name, section_config in REPORT_CITATION_SECTIONS.items():
+        evidence_items = getattr(
+            workflow_evidence,
+            section_config["evidence_attribute"],
+            [],
+        )
+        citation_ids = get_evidence_citation_ids(evidence_items)
 
-    citation_ids = [
+        if not citation_ids:
+            continue
+
+        if section_config["target_type"] == "list":
+            attach_missing_list_citations(
+                report_data=report_data,
+                section_name=section_name,
+                citation_ids=citation_ids,
+                citation_field=section_config["citation_field"],
+            )
+        else:
+            attach_missing_object_citations(
+                report_data=report_data,
+                section_name=section_name,
+                citation_ids=citation_ids,
+                citation_field=section_config["citation_field"],
+            )
+
+
+def get_evidence_citation_ids(evidence_items):
+    return [
         item["citation_id"]
-        for item in workflow_evidence.user_perception
-        if item.get("citation_id")
+        for item in evidence_items
+        if isinstance(item, dict) and item.get("citation_id")
     ]
 
-    if citation_ids:
-        user_perception["citation_ids"] = citation_ids
+
+def attach_missing_list_citations(report_data, section_name, citation_ids, citation_field):
+    section_items = report_data.get(section_name, [])
+
+    if not isinstance(section_items, list):
+        return
+
+    for index, item in enumerate(section_items):
+        if not isinstance(item, dict) or item.get(citation_field):
+            continue
+
+        item[citation_field] = citation_ids[min(index, len(citation_ids) - 1)]
+
+
+def attach_missing_object_citations(report_data, section_name, citation_ids, citation_field):
+    section_item = report_data.get(section_name, {})
+
+    if not isinstance(section_item, dict):
+        return
+
+    if section_item.get("citation_id") or section_item.get("citation_ids"):
+        return
+
+    section_item[citation_field] = citation_ids

@@ -3,7 +3,7 @@
 from copy import deepcopy
 from dataclasses import dataclass, field
 
-from reports.agents.report_output import attach_user_perception_citations
+from reports.agents.report_output import attach_missing_report_citations
 
 
 @dataclass(frozen=True)
@@ -17,86 +17,128 @@ class ReportOutputRepairer:
         repaired_report = deepcopy(report_data)
         applied_repairs = []
 
-        # Attaching missing citations to the report's sections that have factual claims
-        applied_repairs.extend(
-            self._attach_section_citations(
-                repaired_report,
-                section_name="timeline",
-                evidence_items=getattr(workflow_evidence, "timeline", []),
-            )
-        )
-
-        applied_repairs.extend(
-            self._attach_section_citations(
-                repaired_report,
-                section_name="themes",
-                evidence_items=getattr(workflow_evidence, "themes", []),
-            )
-        )
+        applied_repairs.extend(self._repair_missing_nested_fields(repaired_report))
+        applied_repairs.extend(self._repair_missing_citation_fields(repaired_report))
+        applied_repairs.extend(self._repair_missing_rejected_claim_fields(repaired_report))
 
         if workflow_evidence:
-            before_user_perception = dict(repaired_report.get("user_perception", {}))
-            attach_user_perception_citations(repaired_report, workflow_evidence)
-
-            if repaired_report.get("user_perception") != before_user_perception:
-                applied_repairs.append("Added missing evidence citations to user perception.")
+            before_report = deepcopy(repaired_report)
+            attach_missing_report_citations(repaired_report, workflow_evidence)
+            applied_repairs.extend(
+                self._describe_claim_citation_repairs(before_report, repaired_report)
+            )
 
         return OutputRepairResult(
             report_data=repaired_report,
             applied_repairs=applied_repairs,
         )
 
-
-    def _attach_section_citations(self, report_data, section_name, evidence_items):
-        """Attach citations for a given section."""
+    def _repair_missing_nested_fields(self, report_data):
         applied_repairs = []
-        section_items = report_data.get(section_name, [])
+        user_perception = report_data.get("user_perception")
 
-        if not isinstance(section_items, list):
-            return applied_repairs
+        if isinstance(user_perception, dict) and not isinstance(
+            user_perception.get("summary"),
+            str,
+        ):
+            user_perception["summary"] = "No user perception evidence was available."
+            applied_repairs.append("Added missing user perception summary.")
 
-        evidence_citation_ids = [
-            item["citation_id"]
-            for item in evidence_items
-            if isinstance(item, dict) and item.get("citation_id")
-        ]
+        confidence = report_data.get("confidence")
 
-        if not evidence_citation_ids:
-            return applied_repairs
+        if isinstance(confidence, dict):
+            if not isinstance(confidence.get("level"), str):
+                confidence["level"] = "low"
+                applied_repairs.append("Added missing confidence level.")
 
-        for index, item in enumerate(section_items, start=1):
-            if not isinstance(item, dict) or item.get("citation_id"):
-                continue
-
-            fallback_citation_id = evidence_citation_ids[
-                min(index - 1, len(evidence_citation_ids) - 1)
-            ]
-
-            matching_citation_id = self._find_matching_citation_id(
-                item=item,
-                evidence_items=evidence_items,
-            )
-
-            item["citation_id"] = matching_citation_id or fallback_citation_id
-
-            applied_repairs.append(
-                f"Added a missing evidence citation to {section_name} item {index}."
-            )
+            if not isinstance(confidence.get("reason"), str):
+                confidence["reason"] = "Confidence was inferred from available evidence."
+                applied_repairs.append("Added missing confidence reason.")
 
         return applied_repairs
 
+    def _repair_missing_citation_fields(self, report_data):
+        applied_repairs = []
+        citations = report_data.get("citations", [])
 
-    def _find_matching_citation_id(self, item, evidence_items):
-        item_text = " ".join(
-            str(value)
-            for value in item.values()
-            if isinstance(value, str)
-        ).lower()
+        if not isinstance(citations, list):
+            return applied_repairs
 
-        for evidence_item in evidence_items:
-            evidence_text = str(evidence_item.get("text", "")).lower()
+        for index, citation in enumerate(citations, start=1):
+            if not isinstance(citation, dict):
+                continue
 
-            if evidence_text and evidence_text[:80] in item_text:
-                return evidence_item.get("citation_id")
+            if not citation.get("id"):
+                citation["id"] = f"citation-{index}"
+                applied_repairs.append(f"Added missing citation ID to source {index}.")
 
-        return ""
+            if not citation.get("title"):
+                citation["title"] = f"Source {index}"
+                applied_repairs.append(f"Added missing citation title to source {index}.")
+
+            if not citation.get("snippet"):
+                citation["snippet"] = "Source snippet was unavailable."
+                applied_repairs.append(f"Added missing citation snippet to source {index}.")
+
+        return applied_repairs
+
+    def _repair_missing_rejected_claim_fields(self, report_data):
+        applied_repairs = []
+        rejected_claims = report_data.get("rejected_claims", [])
+
+        if not isinstance(rejected_claims, list):
+            return applied_repairs
+
+        for index, rejected_claim in enumerate(rejected_claims, start=1):
+            if not isinstance(rejected_claim, dict):
+                continue
+
+            if not rejected_claim.get("claim"):
+                rejected_claim["claim"] = "Unspecified unsupported claim."
+                applied_repairs.append(f"Added missing rejected claim text to item {index}.")
+
+            if not rejected_claim.get("reason"):
+                rejected_claim["reason"] = "The available evidence did not support this claim."
+                applied_repairs.append(f"Added missing rejected claim reason to item {index}.")
+
+        return applied_repairs
+
+    def _describe_claim_citation_repairs(self, before_report, repaired_report):
+        applied_repairs = []
+
+        for section_name in ["timeline", "themes"]:
+            before_items = before_report.get(section_name, [])
+            repaired_items = repaired_report.get(section_name, [])
+
+            if not isinstance(before_items, list) or not isinstance(repaired_items, list):
+                continue
+
+            for index, repaired_item in enumerate(repaired_items, start=1):
+                before_item = before_items[index - 1] if index - 1 < len(before_items) else {}
+
+                if (
+                    isinstance(before_item, dict)
+                    and isinstance(repaired_item, dict)
+                    and not before_item.get("citation_id")
+                    and repaired_item.get("citation_id")
+                ):
+                    applied_repairs.append(
+                        f"Added a missing evidence citation to {section_name} item {index}."
+                    )
+
+        before_user_perception = before_report.get("user_perception", {})
+        repaired_user_perception = repaired_report.get("user_perception", {})
+
+        if (
+            isinstance(before_user_perception, dict)
+            and isinstance(repaired_user_perception, dict)
+            and not before_user_perception.get("citation_id")
+            and not before_user_perception.get("citation_ids")
+            and (
+                repaired_user_perception.get("citation_id")
+                or repaired_user_perception.get("citation_ids")
+            )
+        ):
+            applied_repairs.append("Added missing evidence citations to user perception.")
+
+        return applied_repairs

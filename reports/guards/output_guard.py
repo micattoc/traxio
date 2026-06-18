@@ -39,11 +39,14 @@ class ReportOutputGuard:
             errors.append(validation_error)
             return OutputGuardResult(is_valid=False, errors=errors)
 
-        errors.extend(self._validate_required_nested_fields(report_data))
-        errors.extend(self._validate_citation_objects(report_data))
+        nested_errors = self._validate_required_nested_fields(report_data)
+        errors.extend(nested_errors)
+        citation_object_errors = self._validate_citation_objects(report_data)
+        errors.extend(citation_object_errors)
         citation_errors = self._validate_accepted_claim_citations(report_data)
         errors.extend(citation_errors)
-        errors.extend(self._validate_rejected_claims(report_data))
+        rejected_claim_errors = self._validate_rejected_claims(report_data)
+        errors.extend(rejected_claim_errors)
         errors.extend(self._validate_no_unsafe_text(report_data))
         errors.extend(self._validate_no_skipped_source_citations(report_data, skipped_sources))
 
@@ -52,9 +55,11 @@ class ReportOutputGuard:
             errors=errors,
             repairable_errors=[
                 error
-                for error in citation_errors
-                if "must include citation_id" in error
-                or "user_perception must include citation_id or citation_ids" in error
+                for error in nested_errors
+                + citation_object_errors
+                + citation_errors
+                + rejected_claim_errors
+                if is_missing_field_error(error)
             ],
         )
 
@@ -222,3 +227,13 @@ def iter_report_strings(value):
     elif isinstance(value, list):
         for child in value:
             yield from iter_report_strings(child)
+
+
+def is_missing_field_error(error):
+    return (
+        "must include" in error
+        or "must be a string" in error
+        or "must be str" in error
+        or "must include citation_id" in error
+        or "user_perception must include citation_id or citation_ids" in error
+    )

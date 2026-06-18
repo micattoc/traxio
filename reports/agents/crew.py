@@ -2,7 +2,7 @@ from crewai import Agent, Crew, LLM, Process, Task
 
 from .evidence import build_citations_from_evidence, evidence_to_prompt_context
 from .report_output import (
-    attach_user_perception_citations,
+    attach_missing_report_citations,
     normalise_report_data,
     parse_json_object,
 )
@@ -129,6 +129,6 @@ def run_crewai_report_generation(settings, company, product, workflow_evidence):
     report_data = parse_json_object(raw_output)
     report_data = normalise_report_data(report_data)
     report_data["citations"] = build_citations_from_evidence(workflow_evidence)
-    attach_user_perception_citations(report_data, workflow_evidence)
+    attach_missing_report_citations(report_data, workflow_evidence)
 
     return report_data
