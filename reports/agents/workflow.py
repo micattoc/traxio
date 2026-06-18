@@ -43,4 +43,5 @@ def run_launch_intelligence_workflow(company, product, evidence_run_id):
 
     return WorkflowResult(
         report_data=report_data,
+        workflow_evidence=workflow_evidence,
     )

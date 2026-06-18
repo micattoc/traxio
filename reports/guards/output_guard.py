@@ -21,6 +21,7 @@ STRATEGY_RECOMMENDATION_PATTERNS = [
 class OutputGuardResult:
     is_valid: bool
     errors: list[str] = field(default_factory=list)
+    repairable_errors: list[str] = field(default_factory=list)
 
     @property
     def message(self):
@@ -40,12 +41,22 @@ class ReportOutputGuard:
 
         errors.extend(self._validate_required_nested_fields(report_data))
         errors.extend(self._validate_citation_objects(report_data))
-        errors.extend(self._validate_accepted_claim_citations(report_data))
+        citation_errors = self._validate_accepted_claim_citations(report_data)
+        errors.extend(citation_errors)
         errors.extend(self._validate_rejected_claims(report_data))
         errors.extend(self._validate_no_unsafe_text(report_data))
         errors.extend(self._validate_no_skipped_source_citations(report_data, skipped_sources))
 
-        return OutputGuardResult(is_valid=not errors, errors=errors)
+        return OutputGuardResult(
+            is_valid=not errors,
+            errors=errors,
+            repairable_errors=[
+                error
+                for error in citation_errors
+                if "must include citation_id" in error
+                or "user_perception must include citation_id or citation_ids" in error
+            ],
+        )
 
 
     def _validate_required_nested_fields(self, report_data):

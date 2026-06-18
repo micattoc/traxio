@@ -9,8 +9,13 @@
 <section class="panel">
     <h2 class="section-title">Timeline</h2>
     <ul>
-        {% for item in report_data.timeline %}
-            <li><strong>{{ item.date }}</strong>: {{ item.event }}</li>
+        {% for item in display_report_data.timeline %}
+            <li>
+                <strong>{{ item.date }}</strong>: {{ item.event }}
+                {% for citation in item.display_citations %}
+                    <a href="{{ citation.url }}" title="{{ citation.title }}">{{ citation.label }}</a>
+                {% endfor %}
+            </li>
         {% endfor %}
     </ul>
 </section>
@@ -18,15 +23,25 @@
 <section class="panel">
     <h2 class="section-title">Themes</h2>
     <ul>
-        {% for theme in report_data.themes %}
-            <li><strong>{{ theme.theme }}</strong>: {{ theme.summary }}</li>
+        {% for theme in display_report_data.themes %}
+            <li>
+                <strong>{{ theme.theme }}</strong>: {{ theme.summary }}
+                {% for citation in theme.display_citations %}
+                    <a href="{{ citation.url }}" title="{{ citation.title }}">{{ citation.label }}</a>
+                {% endfor %}
+            </li>
         {% endfor %}
     </ul>
 </section>
 
 <section class="panel">
     <h2 class="section-title">User perception</h2>
-    <p>{{ report_data.user_perception.summary }}</p>
+    <p>
+        {{ display_report_data.user_perception.summary }}
+        {% for citation in display_report_data.user_perception.display_citations %}
+            <a href="{{ citation.url }}" title="{{ citation.title }}">{{ citation.label }}</a>
+        {% endfor %}
+    </p>
 </section>
 
 <section class="panel">

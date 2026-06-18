@@ -100,4 +100,5 @@ class WorkflowEvidence:
 @dataclass(frozen=True)
 class WorkflowResult:
     report_data: dict
+    workflow_evidence: WorkflowEvidence | None = None
     warnings: list[str] = field(default_factory=list)

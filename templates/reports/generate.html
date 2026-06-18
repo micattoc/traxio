@@ -29,23 +29,38 @@
 
     <h3>Timeline</h3>
     <ul>
-        {% for item in preview.report_data.timeline %}
-            <li><strong>{{ item.date }}</strong>: {{ item.event }}</li>
+        {% for item in preview.display_report_data.timeline %}
+            <li>
+                <strong>{{ item.date }}</strong>: {{ item.event }}
+                {% for citation in item.display_citations %}
+                    <a href="{{ citation.url }}" title="{{ citation.title }}">{{ citation.label }}</a>
+                {% endfor %}
+            </li>
         {% endfor %}
     </ul>
 
     <h3>Themes</h3>
     <ul>
-        {% for theme in preview.report_data.themes %}
-            <li><strong>{{ theme.theme }}</strong>: {{ theme.summary }}</li>
+        {% for theme in preview.display_report_data.themes %}
+            <li>
+                <strong>{{ theme.theme }}</strong>: {{ theme.summary }}
+                {% for citation in theme.display_citations %}
+                    <a href="{{ citation.url }}" title="{{ citation.title }}">{{ citation.label }}</a>
+                {% endfor %}
+            </li>
         {% endfor %}
     </ul>
 
     <h3>User perception</h3>
-    <p>{{ preview.report_data.user_perception.summary }}</p>
+    <p>
+        {{ preview.display_report_data.user_perception.summary }}
+        {% for citation in preview.display_report_data.user_perception.display_citations %}
+            <a href="{{ citation.url }}" title="{{ citation.title }}">{{ citation.label }}</a>
+        {% endfor %}
+    </p>
 
     <h3>Confidence</h3>
-    <p><strong>{{ preview.report_data.confidence.level|title }}</strong>: {{ preview.report_data.confidence.reason }}</p>
+    <p><strong>{{ preview.display_report_data.confidence.level|title }}</strong>: {{ preview.display_report_data.confidence.reason }}</p>
 
     <h3>Runtime source candidates</h3>
 
@@ -108,6 +123,15 @@
         <h3>Input guard warnings</h3>
         <ul>
             {% for warning in preview.guard_warnings %}
+                <li class="muted">{{ warning }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    {% if preview.output_guard_warnings %}
+        <h3>Final report checks</h3>
+        <ul>
+            {% for warning in preview.output_guard_warnings %}
                 <li class="muted">{{ warning }}</li>
             {% endfor %}
         </ul>
